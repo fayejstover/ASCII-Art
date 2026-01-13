@@ -181,14 +181,15 @@
         .ascii-overlay {
             position: absolute;
             background: rgba(200, 196, 184, 0.5);
-            font-family: 'Sample', monospace;
-            font-size: 6px;
-            line-height: 6px;
+            font-family: monospace;
+            font-size: 5px;
+            line-height: 1;
             letter-spacing: 0;
             white-space: pre;
             overflow: hidden;
             border: 1px solid var(--accent-color);
             pointer-events: none;
+            font-weight: normal;
         }
 
         /* Segments Display */
@@ -264,9 +265,19 @@
         .controls-panel {
             background: rgba(180, 176, 165, 0.5);
             padding: 40px 30px;
+            padding-bottom: 0;
             border-left: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+        }
+
+        .controls-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 20px;
         }
 
         /* Title Label */
@@ -502,8 +513,11 @@
 
         /* Action Buttons */
         .actions {
+            position: sticky;
+            bottom: 0;
+            background: transparent;
+            padding: 20px 0 30px 0;
             margin-top: auto;
-            padding-top: 30px;
         }
 
         .action-btn {
@@ -578,9 +592,9 @@
         }
 
         .ascii-output {
-            font-family: 'Sample', monospace;
+            font-family: 'Courier New', Courier, monospace;
             font-size: 10px;
-            line-height: 8px;
+            line-height: 1;
             letter-spacing: 0;
             white-space: pre;
             background: white;
@@ -649,6 +663,7 @@
 
         <!-- Controls Panel -->
         <div class="controls-panel">
+            <div class="controls-content">
             <!-- Character Set Accordion -->
             <div class="accordion">
                 <div class="accordion-header" data-accordion="charset">
@@ -660,21 +675,21 @@
                             <div class="charset-radio selected"></div>
                             <div>
                                 <div class="charset-label">Standard</div>
-                                <div class="charset-preview">@%#*+=-:. </div>
+                                <div class="charset-preview"> .:-=+*#%@</div>
                             </div>
                         </div>
                         <div class="charset-option" data-charset="detailed">
                             <div class="charset-radio"></div>
                             <div>
                                 <div class="charset-label">Detailed</div>
-                                <div class="charset-preview">$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,"^`'. </div>
+                                <div class="charset-preview"> .'`^",:;Il!i><~+_-?][}{1)(|\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$</div>
                             </div>
                         </div>
                         <div class="charset-option" data-charset="blocks">
                             <div class="charset-radio"></div>
                             <div>
                                 <div class="charset-label">Blocks</div>
-                                <div class="charset-preview">█▓▒░ </div>
+                                <div class="charset-preview"> ░▒▓█</div>
                             </div>
                         </div>
                         <div class="custom-charset">
@@ -742,6 +757,7 @@
                     </div>
                 </div>
             </div>
+            </div>
 
             <!-- Actions -->
             <div class="actions">
@@ -770,11 +786,12 @@
         const state = {
             image: null,
             segments: [],
-            charset: '@%#*+=-:. ',
+            charset: ' .:-=+*#%@',
             charsets: {
-                standard: '@%#*+=-:. ',
-                detailed: '$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,"^`\'. ',
-                blocks: '█▓▒░ '
+                // Ordered from light (space) to dark (dense characters)
+                standard: ' .:-=+*#%@',
+                detailed: ' .\'`^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
+                blocks: ' ░▒▓█'
             },
             brightness: 0,
             contrast: 0,
@@ -1071,7 +1088,10 @@
         }
 
         function createASCIIOverlay(segment) {
-            const ascii = generateASCII(segment);
+            const { ascii, cols, rows } = generateASCII(segment);
+            
+            // Calculate font size to fit the selection
+            const fontSize = Math.max(3, segment.displayWidth / cols);
             
             const overlay = document.createElement('div');
             overlay.className = 'ascii-overlay';
@@ -1080,6 +1100,8 @@
             overlay.style.top = `${segment.displayY}px`;
             overlay.style.width = `${segment.displayWidth}px`;
             overlay.style.height = `${segment.displayHeight}px`;
+            overlay.style.fontSize = `${fontSize}px`;
+            overlay.style.lineHeight = '1';
             overlay.textContent = ascii;
             
             elements.imageContainer.appendChild(overlay);
@@ -1089,52 +1111,87 @@
             const canvas = elements.processingCanvas;
             const ctx = canvas.getContext('2d');
 
-            // Calculate ASCII dimensions based on selection size
-            const charWidth = 6;
-            const charHeight = 6;
-            const cols = Math.floor(segment.displayWidth / charWidth);
-            const rows = Math.floor(segment.displayHeight / charHeight);
+            // Character aspect ratio correction
+            // Monospace characters are typically ~2x taller than wide
+            const charAspectRatio = 0.55;
+            
+            // Target resolution - more columns = more detail
+            // Base it on the display width for consistent detail level
+            const targetCols = Math.max(40, Math.floor(segment.displayWidth / 3));
+            const cols = targetCols;
+            const rows = Math.max(1, Math.floor(targetCols * charAspectRatio * (segment.displayHeight / segment.displayWidth)));
 
-            canvas.width = cols;
-            canvas.height = rows;
+            // Use higher resolution canvas for better sampling
+            const sampleWidth = cols * 2;
+            const sampleHeight = rows * 2;
+            
+            canvas.width = sampleWidth;
+            canvas.height = sampleHeight;
 
-            // Draw the selected region scaled down
+            // Draw the selected region
             ctx.drawImage(
                 state.image,
                 segment.x, segment.y, segment.width, segment.height,
-                0, 0, cols, rows
+                0, 0, sampleWidth, sampleHeight
             );
 
             // Get image data
-            let imageData = ctx.getImageData(0, 0, cols, rows);
+            let imageData = ctx.getImageData(0, 0, sampleWidth, sampleHeight);
             
             // Apply adjustments
             imageData = applyAdjustments(imageData);
 
-            // Generate ASCII
+            // Generate ASCII with area sampling
             let ascii = '';
             const chars = state.charset;
+            const data = imageData.data;
 
             for (let y = 0; y < rows; y++) {
                 for (let x = 0; x < cols; x++) {
-                    const i = (y * cols + x) * 4;
-                    const r = imageData.data[i];
-                    const g = imageData.data[i + 1];
-                    const b = imageData.data[i + 2];
+                    // Sample a 2x2 area and average
+                    let totalBrightness = 0;
+                    let sampleCount = 0;
                     
-                    let brightness = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+                    for (let sy = 0; sy < 2; sy++) {
+                        for (let sx = 0; sx < 2; sx++) {
+                            const px = x * 2 + sx;
+                            const py = y * 2 + sy;
+                            
+                            if (px < sampleWidth && py < sampleHeight) {
+                                const i = (py * sampleWidth + px) * 4;
+                                const r = data[i];
+                                const g = data[i + 1];
+                                const b = data[i + 2];
+                                
+                                // Luminance formula
+                                totalBrightness += (r * 0.299 + g * 0.587 + b * 0.114);
+                                sampleCount++;
+                            }
+                        }
+                    }
+                    
+                    let brightness = (totalBrightness / sampleCount) / 255;
+                    
+                    // Invert: by default dark pixels = dense chars, light pixels = sparse chars
+                    // charset is ordered light to dark, so we use brightness directly
+                    // (high brightness = high index = sparse char... wait, we need to invert)
+                    // Actually: high brightness should map to light chars (low index)
+                    // So we need: charIndex = (1 - brightness) * (chars.length - 1)
                     
                     if (state.invert) {
                         brightness = 1 - brightness;
                     }
-
-                    const charIndex = Math.floor(brightness * (chars.length - 1));
-                    ascii += chars[charIndex];
+                    
+                    // Map brightness to character index
+                    // brightness 0 (dark) -> high index (dense char)
+                    // brightness 1 (light) -> low index (sparse char like space)
+                    const charIndex = Math.floor((1 - brightness) * (chars.length - 1));
+                    ascii += chars[Math.max(0, Math.min(chars.length - 1, charIndex))];
                 }
                 ascii += '\n';
             }
 
-            return ascii;
+            return { ascii, cols, rows };
         }
 
         function applyAdjustments(imageData) {
@@ -1264,7 +1321,10 @@
             state.segments.forEach(segment => {
                 const overlay = document.getElementById(`ascii-${segment.id}`);
                 if (overlay) {
-                    overlay.textContent = generateASCII(segment);
+                    const { ascii, cols } = generateASCII(segment);
+                    const fontSize = Math.max(3, segment.displayWidth / cols);
+                    overlay.style.fontSize = `${fontSize}px`;
+                    overlay.textContent = ascii;
                 }
             });
         }
@@ -1304,7 +1364,7 @@
             state.segments.forEach((segment, index) => {
                 output += `/* Segment ${index + 1} - ${segment.note || 'No note'} */\n`;
                 output += `/* Coords: ${segment.x}, ${segment.y} - Size: ${segment.width}x${segment.height} */\n\n`;
-                output += generateASCII(segment);
+                output += generateASCII(segment).ascii;
                 output += '\n\n';
             });
 
