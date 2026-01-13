@@ -6,8 +6,14 @@
     <title>ASCII Image Generator</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        @font-face {
+            font-family: 'Sample';
+            src: url('sample.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
         :root {
             --bg-color: #c8c4b8;
             --grid-color: #a8a498;
@@ -22,16 +28,18 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            letter-spacing: -0.06em;
         }
 
         body {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Sample', monospace;
             background-color: var(--bg-color);
             color: var(--text-color);
             min-height: 100vh;
             background-image: 
-                radial-gradient(circle, var(--grid-color) 1px, transparent 1px);
-            background-size: 12px 12px;
+                linear-gradient(to right, rgba(255, 255, 255, 0.33) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.33) 1px, transparent 1px);
+            background-size: 9px 9px;
             overflow-x: hidden;
         }
 
@@ -54,7 +62,7 @@
         }
 
         .title {
-            font-family: 'VT323', monospace;
+            font-family: 'Sample', monospace;
             font-size: 42px;
             letter-spacing: 2px;
             margin-bottom: 8px;
@@ -64,13 +72,13 @@
         }
 
         .byline {
-            font-family: 'Space Mono', monospace;
+            font-family: 'Sample', monospace;
             font-size: 12px;
             opacity: 0.7;
         }
 
         .instructions {
-            font-family: 'Space Mono', monospace;
+            font-family: 'Sample', monospace;
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -119,7 +127,7 @@
         }
 
         .upload-text {
-            font-family: 'VT323', monospace;
+            font-family: 'Sample', monospace;
             font-size: 24px;
             opacity: 0.6;
             text-align: center;
@@ -127,7 +135,7 @@
 
         .upload-text small {
             display: block;
-            font-family: 'Space Mono', monospace;
+            font-family: 'Sample', monospace;
             font-size: 11px;
             margin-top: 10px;
             text-transform: uppercase;
@@ -173,7 +181,7 @@
         .ascii-overlay {
             position: absolute;
             background: rgba(200, 196, 184, 0.5);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Sample', monospace;
             font-size: 6px;
             line-height: 6px;
             letter-spacing: 0;
@@ -188,7 +196,7 @@
             width: 100%;
             max-width: 600px;
             margin-top: 40px;
-            font-family: 'Space Mono', monospace;
+            font-family: 'Sample', monospace;
             font-size: 13px;
         }
 
@@ -198,21 +206,28 @@
 
         .segment-item {
             display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
-            padding: 8px 0;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 15px;
+            padding: 12px 0;
             border-bottom: 1px dotted var(--border-color);
         }
 
+        .segment-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         .segment-label {
-            min-width: 180px;
+            font-size: 13px;
         }
 
         .segment-coords {
-            font-family: 'VT323', monospace;
-            font-size: 24px;
-            letter-spacing: 1px;
+            font-family: 'Sample', monospace;
+            font-size: 52px;
+            letter-spacing: -0.06em;
+            line-height: 1;
         }
 
         .segment-note {
@@ -254,12 +269,9 @@
             flex-direction: column;
         }
 
-        .title-input-section {
-            margin-bottom: 40px;
-        }
-
+        /* Title Label */
         .title-label {
-            font-family: 'VT323', monospace;
+            font-family: 'Sample', monospace;
             font-size: 28px;
             writing-mode: vertical-rl;
             text-orientation: mixed;
@@ -268,22 +280,21 @@
             top: 50%;
             transform: translateY(-50%);
             letter-spacing: 4px;
+            cursor: default;
+            padding: 10px 5px;
+            border: 1px solid transparent;
+            transition: border-color 0.2s;
         }
 
-        .title-input {
-            width: 100%;
-            background: transparent;
-            border: none;
-            border-bottom: 2px solid var(--text-color);
-            font-family: 'Space Mono', monospace;
-            font-size: 14px;
-            padding: 8px 0;
-            color: var(--text-color);
+        .title-label:hover {
+            border-color: var(--border-color);
+        }
+
+        .title-label.editing {
+            border-color: var(--accent-color);
+            background: rgba(255, 255, 255, 0.3);
             outline: none;
-        }
-
-        .title-input::placeholder {
-            opacity: 0.5;
+            cursor: text;
         }
 
         /* Accordion Panels */
@@ -292,7 +303,7 @@
         }
 
         .accordion-header {
-            font-family: 'Space Mono', monospace;
+            font-family: 'Sample', monospace;
             font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -365,12 +376,12 @@
         }
 
         .charset-label {
-            font-family: 'Space Mono', monospace;
+            font-family: 'Sample', monospace;
             font-size: 11px;
         }
 
         .charset-preview {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Sample', monospace;
             font-size: 10px;
             opacity: 0.6;
             word-break: break-all;
@@ -385,7 +396,7 @@
             background: rgba(255, 255, 255, 0.3);
             border: 1px solid var(--border-color);
             padding: 10px;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Sample', monospace;
             font-size: 12px;
             color: var(--text-color);
             outline: none;
@@ -397,7 +408,7 @@
 
         .custom-charset label {
             display: block;
-            font-family: 'Space Mono', monospace;
+            font-family: 'Sample', monospace;
             font-size: 10px;
             text-transform: uppercase;
             margin-bottom: 8px;
@@ -412,7 +423,7 @@
         .slider-label {
             display: flex;
             justify-content: space-between;
-            font-family: 'Space Mono', monospace;
+            font-family: 'Sample', monospace;
             font-size: 11px;
             margin-bottom: 8px;
         }
@@ -426,6 +437,7 @@
             height: 4px;
             background: var(--border-color);
             outline: none;
+            -webkit-appearance: none;
             cursor: pointer;
         }
 
@@ -454,7 +466,7 @@
         }
 
         .toggle-label {
-            font-family: 'Space Mono', monospace;
+            font-family: 'Sample', monospace;
             font-size: 11px;
         }
 
@@ -497,7 +509,7 @@
         .action-btn {
             width: 100%;
             padding: 14px;
-            font-family: 'Space Mono', monospace;
+            font-family: 'Sample', monospace;
             font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -566,7 +578,7 @@
         }
 
         .ascii-output {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Sample', monospace;
             font-size: 8px;
             line-height: 8px;
             letter-spacing: 0;
@@ -637,10 +649,6 @@
 
         <!-- Controls Panel -->
         <div class="controls-panel">
-            <div class="title-input-section">
-                <input type="text" class="title-input" id="pieceTitle" placeholder="Enter title...">
-            </div>
-
             <!-- Character Set Accordion -->
             <div class="accordion">
                 <div class="accordion-header" data-accordion="charset">
@@ -744,7 +752,7 @@
         </div>
     </div>
 
-    <div class="title-label">Title</div>
+    <div class="title-label" id="titleLabel" contenteditable="false" title="Double-click to edit">Title</div>
 
     <!-- ASCII Output Modal -->
     <div class="ascii-modal" id="asciiModal">
@@ -793,7 +801,7 @@
             asciiModal: document.getElementById('asciiModal'),
             asciiOutput: document.getElementById('asciiOutput'),
             modalClose: document.getElementById('modalClose'),
-            pieceTitle: document.getElementById('pieceTitle'),
+            titleLabel: document.getElementById('titleLabel'),
             customCharset: document.getElementById('customCharset'),
             brightness: document.getElementById('brightness'),
             contrast: document.getElementById('contrast'),
@@ -915,6 +923,35 @@
             elements.asciiModal.addEventListener('click', (e) => {
                 if (e.target === elements.asciiModal) {
                     elements.asciiModal.classList.remove('open');
+                }
+            });
+
+            // Title label double-click to edit
+            elements.titleLabel.addEventListener('dblclick', () => {
+                elements.titleLabel.contentEditable = 'true';
+                elements.titleLabel.classList.add('editing');
+                elements.titleLabel.focus();
+                
+                // Select all text
+                const range = document.createRange();
+                range.selectNodeContents(elements.titleLabel);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            });
+
+            elements.titleLabel.addEventListener('blur', () => {
+                elements.titleLabel.contentEditable = 'false';
+                elements.titleLabel.classList.remove('editing');
+                if (!elements.titleLabel.textContent.trim()) {
+                    elements.titleLabel.textContent = 'Title';
+                }
+            });
+
+            elements.titleLabel.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    elements.titleLabel.blur();
                 }
             });
         }
@@ -1176,13 +1213,17 @@
             
             elements.segmentsList.innerHTML = state.segments.map((segment, index) => `
                 <div class="segment-item" data-id="${segment.id}">
-                    <span class="segment-label">segment.coords = ${String(index + 1).padStart(2, '0')}</span>
-                    <span class="segment-coords">${segment.x}.${segment.y}</span>
-                    <span class="segment-note">
-                        // <input type="text" value="${segment.note}" placeholder="NOTE" 
-                            onchange="updateSegmentNote(${segment.id}, this.value)">
-                    </span>
-                    <button class="segment-delete" onclick="deleteSegment(${segment.id})">×</button>
+                    <div class="segment-row">
+                        <span class="segment-label">segment.coords = ${String(index + 1).padStart(2, '0')} .</span>
+                        <span class="segment-coords">${segment.x}.${segment.y}</span>
+                    </div>
+                    <div class="segment-row">
+                        <span class="segment-note">
+                            // <input type="text" value="${segment.note}" placeholder="NOTE" 
+                                onchange="updateSegmentNote(${segment.id}, this.value)">
+                        </span>
+                        <button class="segment-delete" onclick="deleteSegment(${segment.id})">×</button>
+                    </div>
                 </div>
             `).join('');
         }
@@ -1257,7 +1298,7 @@
             }
 
             let output = '';
-            const title = elements.pieceTitle.value || 'Untitled';
+            const title = elements.titleLabel.textContent || 'Untitled';
             output += `// ${title}\n// Generated by ASCII Image Generator\n// By: Faye Stover\n\n`;
 
             state.segments.forEach((segment, index) => {
