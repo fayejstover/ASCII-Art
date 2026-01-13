@@ -181,9 +181,9 @@
         .ascii-overlay {
             position: absolute;
             background: rgba(200, 196, 184, 0.5);
-            font-family: monospace;
-            font-size: 5px;
-            line-height: 1;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 6px;
+            line-height: 6px;
             letter-spacing: 0;
             white-space: pre;
             overflow: hidden;
@@ -1088,10 +1088,16 @@
         }
 
         function createASCIIOverlay(segment) {
-            const { ascii, cols, rows } = generateASCII(segment);
+            // Fixed font size for consistent character dimensions
+            const fontSize = 6;
+            const charWidth = fontSize * 0.6; // Monospace chars are ~60% as wide as tall
+            const lineHeight = fontSize;
             
-            // Calculate font size to fit the selection
-            const fontSize = Math.max(3, segment.displayWidth / cols);
+            // Calculate exact cols/rows to fill the container
+            const cols = Math.floor(segment.displayWidth / charWidth);
+            const rows = Math.floor(segment.displayHeight / lineHeight);
+            
+            const ascii = generateASCII(segment, cols, rows);
             
             const overlay = document.createElement('div');
             overlay.className = 'ascii-overlay';
@@ -1101,82 +1107,52 @@
             overlay.style.width = `${segment.displayWidth}px`;
             overlay.style.height = `${segment.displayHeight}px`;
             overlay.style.fontSize = `${fontSize}px`;
-            overlay.style.lineHeight = '1';
+            overlay.style.lineHeight = `${lineHeight}px`;
             overlay.textContent = ascii;
+            
+            // Store dimensions for later updates
+            segment.asciiCols = cols;
+            segment.asciiRows = rows;
+            segment.asciiFontSize = fontSize;
             
             elements.imageContainer.appendChild(overlay);
         }
 
-        function generateASCII(segment) {
+        function generateASCII(segment, cols, rows) {
             const canvas = elements.processingCanvas;
             const ctx = canvas.getContext('2d');
-
-            // Character aspect ratio correction
-            // Monospace characters are typically ~2x taller than wide
-            const charAspectRatio = 0.55;
             
-            // Target resolution - more columns = more detail
-            // Base it on the display width for consistent detail level
-            const targetCols = Math.max(40, Math.floor(segment.displayWidth / 3));
-            const cols = targetCols;
-            const rows = Math.max(1, Math.floor(targetCols * charAspectRatio * (segment.displayHeight / segment.displayWidth)));
+            // Set canvas to match source region dimensions for accurate sampling
+            canvas.width = cols;
+            canvas.height = rows;
 
-            // Use higher resolution canvas for better sampling
-            const sampleWidth = cols * 2;
-            const sampleHeight = rows * 2;
-            
-            canvas.width = sampleWidth;
-            canvas.height = sampleHeight;
-
-            // Draw the selected region
+            // Draw the selected region scaled to our target dimensions
             ctx.drawImage(
                 state.image,
                 segment.x, segment.y, segment.width, segment.height,
-                0, 0, sampleWidth, sampleHeight
+                0, 0, cols, rows
             );
 
             // Get image data
-            let imageData = ctx.getImageData(0, 0, sampleWidth, sampleHeight);
+            let imageData = ctx.getImageData(0, 0, cols, rows);
             
             // Apply adjustments
             imageData = applyAdjustments(imageData);
 
-            // Generate ASCII with area sampling
+            // Generate ASCII
             let ascii = '';
             const chars = state.charset;
             const data = imageData.data;
 
             for (let y = 0; y < rows; y++) {
                 for (let x = 0; x < cols; x++) {
-                    // Sample a 2x2 area and average
-                    let totalBrightness = 0;
-                    let sampleCount = 0;
+                    const i = (y * cols + x) * 4;
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
                     
-                    for (let sy = 0; sy < 2; sy++) {
-                        for (let sx = 0; sx < 2; sx++) {
-                            const px = x * 2 + sx;
-                            const py = y * 2 + sy;
-                            
-                            if (px < sampleWidth && py < sampleHeight) {
-                                const i = (py * sampleWidth + px) * 4;
-                                const r = data[i];
-                                const g = data[i + 1];
-                                const b = data[i + 2];
-                                
-                                // Luminance formula
-                                totalBrightness += (r * 0.299 + g * 0.587 + b * 0.114);
-                                sampleCount++;
-                            }
-                        }
-                    }
-                    
-                    let brightness = (totalBrightness / sampleCount) / 255;
-                    
-                    // Invert: by default dark pixels = dense chars, light pixels = sparse chars
-                    // charset is ordered light to dark, so we use brightness directly
-                    // (high brightness = high index = sparse char... wait, we need to invert)
-                    // Actually: high brightness should map to light chars (low index)
-                    // So we need: charIndex = (1 - brightness) * (chars.length - 1)
+                    // Calculate brightness using luminance formula
+                    let brightness = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
                     
                     if (state.invert) {
                         brightness = 1 - brightness;
@@ -1188,10 +1164,12 @@
                     const charIndex = Math.floor((1 - brightness) * (chars.length - 1));
                     ascii += chars[Math.max(0, Math.min(chars.length - 1, charIndex))];
                 }
-                ascii += '\n';
+                if (y < rows - 1) {
+                    ascii += '\n';
+                }
             }
 
-            return { ascii, cols, rows };
+            return ascii;
         }
 
         function applyAdjustments(imageData) {
@@ -1320,10 +1298,8 @@
         function updateAllSegments() {
             state.segments.forEach(segment => {
                 const overlay = document.getElementById(`ascii-${segment.id}`);
-                if (overlay) {
-                    const { ascii, cols } = generateASCII(segment);
-                    const fontSize = Math.max(3, segment.displayWidth / cols);
-                    overlay.style.fontSize = `${fontSize}px`;
+                if (overlay && segment.asciiCols && segment.asciiRows) {
+                    const ascii = generateASCII(segment, segment.asciiCols, segment.asciiRows);
                     overlay.textContent = ascii;
                 }
             });
@@ -1364,7 +1340,10 @@
             state.segments.forEach((segment, index) => {
                 output += `/* Segment ${index + 1} - ${segment.note || 'No note'} */\n`;
                 output += `/* Coords: ${segment.x}, ${segment.y} - Size: ${segment.width}x${segment.height} */\n\n`;
-                output += generateASCII(segment).ascii;
+                // Use higher resolution for export
+                const exportCols = segment.asciiCols * 2 || 100;
+                const exportRows = segment.asciiRows * 2 || 50;
+                output += generateASCII(segment, exportCols, exportRows);
                 output += '\n\n';
             });
 
