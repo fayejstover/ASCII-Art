@@ -23,4 +23,3 @@ A web-based tool that converts images into ASCII art. Upload an image, drag to s
 ## Acknowledgments
 
 - Inspired by classic ASCII art tools and terminal aesthetics
-- Typography: [VT323](https://fonts.google.com/specimen/VT323), [Space Mono](https://fonts.google.com/specimen/Space+Mono), [IBM Plex Mono](https://fonts.google.com/specimen/IBM+Plex+Mono)
