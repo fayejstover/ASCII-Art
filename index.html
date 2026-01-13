@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Image Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #c8c4b8;
+            --grid-color: #a8a498;
+            --text-color: #1a1a1a;
+            --accent-color: #2d5a27;
+            --panel-bg: rgba(200, 196, 184, 0.9);
+            --selection-color: rgba(45, 90, 39, 0.3);
+            --border-color: #888;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Mono', monospace;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle, var(--grid-color) 1px, transparent 1px);
+            background-size: 12px 12px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            min-height: 100vh;
+            gap: 0;
+        }
+
+        /* Left Panel - Main Canvas Area */
+        .main-panel {
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-family: 'VT323', monospace;
+            font-size: 42px;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        .byline {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .instructions {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1.8;
+            opacity: 0.8;
+        }
+
+        .instructions span {
+            display: block;
+        }
+
+        /* Image Canvas Area */
+        .canvas-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 30px 0;
+        }
+
+        .upload-zone {
+            width: 100%;
+            max-width: 600px;
+            min-height: 350px;
+            border: 2px dashed var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent-color);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .upload-zone.has-image {
+            border: none;
+            background: transparent;
+            cursor: crosshair;
+        }
+
+        .upload-text {
+            font-family: 'VT323', monospace;
+            font-size: 24px;
+            opacity: 0.6;
+            text-align: center;
+        }
+
+        .upload-text small {
+            display: block;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            margin-top: 10px;
+            text-transform: uppercase;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Image Container */
+        .image-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        #uploadedImage {
+            max-width: 100%;
+            max-height: 400px;
+            display: block;
+            filter: grayscale(100%);
+        }
+
+        .selection-box {
+            position: absolute;
+            border: 2px solid var(--accent-color);
+            background: var(--selection-color);
+            pointer-events: none;
+        }
+
+        .tooltip {
+            position: absolute;
+            top: -30px;
+            right: 0;
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            background: var(--text-color);
+            color: var(--bg-color);
+            padding: 4px 8px;
+            white-space: nowrap;
+        }
+
+        /* ASCII Overlay */
+        .ascii-overlay {
+            position: absolute;
+            background: rgba(200, 196, 184, 0.5);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 6px;
+            line-height: 6px;
+            letter-spacing: 0;
+            white-space: pre;
+            overflow: hidden;
+            border: 1px solid var(--accent-color);
+            pointer-events: none;
+        }
+
+        /* Segments Display */
+        .segments-display {
+            width: 100%;
+            max-width: 600px;
+            margin-top: 40px;
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+        }
+
+        .segments-header {
+            margin-bottom: 15px;
+        }
+
+        .segment-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            padding: 8px 0;
+            border-bottom: 1px dotted var(--border-color);
+        }
+
+        .segment-label {
+            min-width: 180px;
+        }
+
+        .segment-coords {
+            font-family: 'VT323', monospace;
+            font-size: 24px;
+            letter-spacing: 1px;
+        }
+
+        .segment-note {
+            font-size: 11px;
+            opacity: 0.6;
+        }
+
+        .segment-note input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--border-color);
+            font-family: inherit;
+            font-size: inherit;
+            color: inherit;
+            width: 100px;
+            outline: none;
+        }
+
+        .segment-delete {
+            background: none;
+            border: none;
+            cursor: pointer;
+            opacity: 0.5;
+            font-family: inherit;
+            font-size: 16px;
+            transition: opacity 0.2s;
+        }
+
+        .segment-delete:hover {
+            opacity: 1;
+        }
+
+        /* Right Panel - Controls */
+        .controls-panel {
+            background: rgba(180, 176, 165, 0.5);
+            padding: 40px 30px;
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .title-input-section {
+            margin-bottom: 40px;
+        }
+
+        .title-label {
+            font-family: 'VT323', monospace;
+            font-size: 28px;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            position: absolute;
+            right: 395px;
+            top: 50%;
+            transform: translateY(-50%);
+            letter-spacing: 4px;
+        }
+
+        .title-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid var(--text-color);
+            font-family: 'Space Mono', monospace;
+            font-size: 14px;
+            padding: 8px 0;
+            color: var(--text-color);
+            outline: none;
+        }
+
+        .title-input::placeholder {
+            opacity: 0.5;
+        }
+
+        /* Accordion Panels */
+        .accordion {
+            margin-bottom: 20px;
+        }
+
+        .accordion-header {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: opacity 0.2s;
+            user-select: none;
+        }
+
+        .accordion-header:hover {
+            opacity: 0.7;
+        }
+
+        .accordion-header::before {
+            content: '+';
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.3s;
+        }
+
+        .accordion-header.open::before {
+            content: '−';
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .accordion-content.open {
+            max-height: 500px;
+        }
+
+        .accordion-inner {
+            padding: 20px 0;
+        }
+
+        /* Character Set Options */
+        .charset-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+
+        .charset-radio {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--text-color);
+            border-radius: 50%;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .charset-radio.selected::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 6px;
+            height: 6px;
+            background: var(--text-color);
+            border-radius: 50%;
+        }
+
+        .charset-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+        }
+
+        .charset-preview {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            opacity: 0.6;
+            word-break: break-all;
+        }
+
+        .custom-charset {
+            margin-top: 15px;
+        }
+
+        .custom-charset input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.3);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            color: var(--text-color);
+            outline: none;
+        }
+
+        .custom-charset input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .custom-charset label {
+            display: block;
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            opacity: 0.7;
+        }
+
+        /* Sliders */
+        .slider-group {
+            margin-bottom: 20px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            margin-bottom: 8px;
+        }
+
+        .slider-value {
+            opacity: 0.7;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: var(--border-color);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--text-color);
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            background: var(--text-color);
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Toggle Switch */
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .toggle-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+        }
+
+        .toggle-switch {
+            width: 44px;
+            height: 22px;
+            background: var(--border-color);
+            border-radius: 11px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: var(--accent-color);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(22px);
+        }
+
+        /* Action Buttons */
+        .actions {
+            margin-top: auto;
+            padding-top: 30px;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 14px;
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 2px solid var(--text-color);
+            background: transparent;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+        }
+
+        .action-btn:hover {
+            background: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        .action-btn.primary {
+            background: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        .action-btn.primary:hover {
+            background: transparent;
+            color: var(--text-color);
+        }
+
+        /* ASCII Output Modal */
+        .ascii-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ascii-modal.open {
+            display: flex;
+        }
+
+        .ascii-modal-content {
+            background: var(--bg-color);
+            padding: 40px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: auto;
+            position: relative;
+        }
+
+        .ascii-modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+
+        .ascii-modal-close:hover {
+            opacity: 1;
+        }
+
+        .ascii-output {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 8px;
+            line-height: 8px;
+            letter-spacing: 0;
+            white-space: pre;
+            background: white;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Hidden canvas for processing */
+        #processingCanvas {
+            display: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .controls-panel {
+                border-left: none;
+                border-top: 1px solid var(--border-color);
+            }
+
+            .title-label {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Main Panel -->
+        <div class="main-panel">
+            <header class="header">
+                <h1 class="title">
+                    ASCII Image Generator
+                    <span class="byline">// BY: FAYE STOVER</span>
+                </h1>
+                <div class="instructions">
+                    <span>1. LOAD A JPEG OR PNG IMAGE TO CONVERT IT INTO ASCII.</span>
+                    <span>2. FOR BEST RESULTS, USE IMAGES WITH CLEAR CONTRASTS.</span>
+                    <span>3. DRAG AND SELECT REGIONS TO CONVERT.</span>
+                </div>
+            </header>
+
+            <div class="canvas-area">
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-text" id="uploadText">
+                        Click or drag to upload
+                        <small>JPEG, PNG supported</small>
+                    </div>
+                    <div class="image-container" id="imageContainer" style="display: none;">
+                        <img id="uploadedImage" alt="Uploaded image">
+                        <div class="tooltip" id="tooltip" style="display: none;">drag and select on image</div>
+                    </div>
+                </div>
+                <input type="file" id="fileInput" accept="image/jpeg,image/png">
+
+                <div class="segments-display" id="segmentsDisplay" style="display: none;">
+                    <div class="segments-header">pieces {</div>
+                    <div id="segmentsList"></div>
+                    <div class="segments-header">}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls Panel -->
+        <div class="controls-panel">
+            <div class="title-input-section">
+                <input type="text" class="title-input" id="pieceTitle" placeholder="Enter title...">
+            </div>
+
+            <!-- Character Set Accordion -->
+            <div class="accordion">
+                <div class="accordion-header" data-accordion="charset">
+                    SELECT/CREATE A CHARACTER SET
+                </div>
+                <div class="accordion-content" id="charsetContent">
+                    <div class="accordion-inner">
+                        <div class="charset-option" data-charset="standard">
+                            <div class="charset-radio selected"></div>
+                            <div>
+                                <div class="charset-label">Standard</div>
+                                <div class="charset-preview">@%#*+=-:. </div>
+                            </div>
+                        </div>
+                        <div class="charset-option" data-charset="detailed">
+                            <div class="charset-radio"></div>
+                            <div>
+                                <div class="charset-label">Detailed</div>
+                                <div class="charset-preview">$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,"^`'. </div>
+                            </div>
+                        </div>
+                        <div class="charset-option" data-charset="blocks">
+                            <div class="charset-radio"></div>
+                            <div>
+                                <div class="charset-label">Blocks</div>
+                                <div class="charset-preview">█▓▒░ </div>
+                            </div>
+                        </div>
+                        <div class="custom-charset">
+                            <label>Or enter custom characters (dark to light):</label>
+                            <input type="text" id="customCharset" placeholder="@#$%&*+-. ">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Levels Accordion -->
+            <div class="accordion">
+                <div class="accordion-header" data-accordion="levels">
+                    ADJUST THE LEVELS
+                </div>
+                <div class="accordion-content" id="levelsContent">
+                    <div class="accordion-inner">
+                        <div class="slider-group">
+                            <div class="slider-label">
+                                <span>Brightness</span>
+                                <span class="slider-value" id="brightnessValue">0</span>
+                            </div>
+                            <input type="range" id="brightness" min="-100" max="100" value="0">
+                        </div>
+                        <div class="slider-group">
+                            <div class="slider-label">
+                                <span>Contrast</span>
+                                <span class="slider-value" id="contrastValue">0</span>
+                            </div>
+                            <input type="range" id="contrast" min="-100" max="100" value="0">
+                        </div>
+                        <div class="slider-group">
+                            <div class="slider-label">
+                                <span>Sharpness</span>
+                                <span class="slider-value" id="sharpnessValue">0</span>
+                            </div>
+                            <input type="range" id="sharpness" min="0" max="100" value="0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edge Detection Accordion -->
+            <div class="accordion">
+                <div class="accordion-header" data-accordion="edge">
+                    EXPERIMENT WITH EDGE DETECTION
+                </div>
+                <div class="accordion-content" id="edgeContent">
+                    <div class="accordion-inner">
+                        <div class="toggle-group">
+                            <span class="toggle-label">Enable Edge Detection</span>
+                            <div class="toggle-switch" id="edgeToggle"></div>
+                        </div>
+                        <div class="slider-group">
+                            <div class="slider-label">
+                                <span>Edge Threshold</span>
+                                <span class="slider-value" id="edgeThresholdValue">50</span>
+                            </div>
+                            <input type="range" id="edgeThreshold" min="0" max="100" value="50">
+                        </div>
+                        <div class="toggle-group">
+                            <span class="toggle-label">Invert Image</span>
+                            <div class="toggle-switch" id="invertToggle"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="actions">
+                <button class="action-btn" id="convertAllBtn">Convert Full Image</button>
+                <button class="action-btn" id="exportBtn">Export ASCII</button>
+                <button class="action-btn" id="clearBtn">Clear All</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="title-label">Title</div>
+
+    <!-- ASCII Output Modal -->
+    <div class="ascii-modal" id="asciiModal">
+        <div class="ascii-modal-content">
+            <span class="ascii-modal-close" id="modalClose">&times;</span>
+            <pre class="ascii-output" id="asciiOutput"></pre>
+        </div>
+    </div>
+
+    <!-- Hidden Canvas -->
+    <canvas id="processingCanvas"></canvas>
+
+    <script>
+        // State
+        const state = {
+            image: null,
+            segments: [],
+            charset: '@%#*+=-:. ',
+            charsets: {
+                standard: '@%#*+=-:. ',
+                detailed: '$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,"^`\'. ',
+                blocks: '█▓▒░ '
+            },
+            brightness: 0,
+            contrast: 0,
+            sharpness: 0,
+            edgeDetection: false,
+            edgeThreshold: 50,
+            invert: false,
+            isSelecting: false,
+            selectionStart: null,
+            currentSelection: null
+        };
+
+        // DOM Elements
+        const elements = {
+            uploadZone: document.getElementById('uploadZone'),
+            uploadText: document.getElementById('uploadText'),
+            fileInput: document.getElementById('fileInput'),
+            imageContainer: document.getElementById('imageContainer'),
+            uploadedImage: document.getElementById('uploadedImage'),
+            tooltip: document.getElementById('tooltip'),
+            segmentsDisplay: document.getElementById('segmentsDisplay'),
+            segmentsList: document.getElementById('segmentsList'),
+            processingCanvas: document.getElementById('processingCanvas'),
+            asciiModal: document.getElementById('asciiModal'),
+            asciiOutput: document.getElementById('asciiOutput'),
+            modalClose: document.getElementById('modalClose'),
+            pieceTitle: document.getElementById('pieceTitle'),
+            customCharset: document.getElementById('customCharset'),
+            brightness: document.getElementById('brightness'),
+            contrast: document.getElementById('contrast'),
+            sharpness: document.getElementById('sharpness'),
+            edgeToggle: document.getElementById('edgeToggle'),
+            edgeThreshold: document.getElementById('edgeThreshold'),
+            invertToggle: document.getElementById('invertToggle'),
+            convertAllBtn: document.getElementById('convertAllBtn'),
+            exportBtn: document.getElementById('exportBtn'),
+            clearBtn: document.getElementById('clearBtn')
+        };
+
+        // Initialize
+        function init() {
+            setupEventListeners();
+            setupAccordions();
+        }
+
+        function setupEventListeners() {
+            // File upload
+            elements.uploadZone.addEventListener('click', (e) => {
+                if (!state.image) {
+                    elements.fileInput.click();
+                }
+            });
+
+            elements.uploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                elements.uploadZone.style.borderColor = 'var(--accent-color)';
+            });
+
+            elements.uploadZone.addEventListener('dragleave', () => {
+                elements.uploadZone.style.borderColor = '';
+            });
+
+            elements.uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                elements.uploadZone.style.borderColor = '';
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.match('image.*')) {
+                    loadImage(file);
+                }
+            });
+
+            elements.fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    loadImage(file);
+                }
+            });
+
+            // Image selection
+            elements.imageContainer.addEventListener('mousedown', startSelection);
+            document.addEventListener('mousemove', updateSelection);
+            document.addEventListener('mouseup', endSelection);
+
+            // Character set options
+            document.querySelectorAll('.charset-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    const charset = option.dataset.charset;
+                    selectCharset(charset);
+                });
+            });
+
+            elements.customCharset.addEventListener('input', (e) => {
+                if (e.target.value.trim()) {
+                    state.charset = e.target.value;
+                    clearCharsetSelection();
+                    updateAllSegments();
+                }
+            });
+
+            // Sliders
+            elements.brightness.addEventListener('input', (e) => {
+                state.brightness = parseInt(e.target.value);
+                document.getElementById('brightnessValue').textContent = state.brightness;
+                updateAllSegments();
+            });
+
+            elements.contrast.addEventListener('input', (e) => {
+                state.contrast = parseInt(e.target.value);
+                document.getElementById('contrastValue').textContent = state.contrast;
+                updateAllSegments();
+            });
+
+            elements.sharpness.addEventListener('input', (e) => {
+                state.sharpness = parseInt(e.target.value);
+                document.getElementById('sharpnessValue').textContent = state.sharpness;
+                updateAllSegments();
+            });
+
+            elements.edgeThreshold.addEventListener('input', (e) => {
+                state.edgeThreshold = parseInt(e.target.value);
+                document.getElementById('edgeThresholdValue').textContent = state.edgeThreshold;
+                updateAllSegments();
+            });
+
+            // Toggles
+            elements.edgeToggle.addEventListener('click', () => {
+                state.edgeDetection = !state.edgeDetection;
+                elements.edgeToggle.classList.toggle('active', state.edgeDetection);
+                updateAllSegments();
+            });
+
+            elements.invertToggle.addEventListener('click', () => {
+                state.invert = !state.invert;
+                elements.invertToggle.classList.toggle('active', state.invert);
+                updateAllSegments();
+            });
+
+            // Actions
+            elements.convertAllBtn.addEventListener('click', convertFullImage);
+            elements.exportBtn.addEventListener('click', exportASCII);
+            elements.clearBtn.addEventListener('click', clearAll);
+            elements.modalClose.addEventListener('click', () => {
+                elements.asciiModal.classList.remove('open');
+            });
+
+            elements.asciiModal.addEventListener('click', (e) => {
+                if (e.target === elements.asciiModal) {
+                    elements.asciiModal.classList.remove('open');
+                }
+            });
+        }
+
+        function setupAccordions() {
+            document.querySelectorAll('.accordion-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const accordionName = header.dataset.accordion;
+                    const content = document.getElementById(`${accordionName}Content`);
+                    header.classList.toggle('open');
+                    content.classList.toggle('open');
+                });
+            });
+        }
+
+        function loadImage(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                state.image = new Image();
+                state.image.onload = () => {
+                    elements.uploadedImage.src = state.image.src;
+                    elements.uploadText.style.display = 'none';
+                    elements.imageContainer.style.display = 'block';
+                    elements.uploadZone.classList.add('has-image');
+                    elements.tooltip.style.display = 'block';
+                    setTimeout(() => {
+                        elements.tooltip.style.display = 'none';
+                    }, 3000);
+                };
+                state.image.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function startSelection(e) {
+            if (!state.image) return;
+            e.preventDefault();
+            
+            const rect = elements.uploadedImage.getBoundingClientRect();
+            state.isSelecting = true;
+            state.selectionStart = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+
+            // Create selection box
+            const selectionBox = document.createElement('div');
+            selectionBox.className = 'selection-box';
+            selectionBox.id = 'currentSelection';
+            elements.imageContainer.appendChild(selectionBox);
+        }
+
+        function updateSelection(e) {
+            if (!state.isSelecting) return;
+            
+            const rect = elements.uploadedImage.getBoundingClientRect();
+            const currentX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+            const currentY = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+
+            const selectionBox = document.getElementById('currentSelection');
+            if (selectionBox) {
+                const x = Math.min(state.selectionStart.x, currentX);
+                const y = Math.min(state.selectionStart.y, currentY);
+                const width = Math.abs(currentX - state.selectionStart.x);
+                const height = Math.abs(currentY - state.selectionStart.y);
+
+                selectionBox.style.left = `${x}px`;
+                selectionBox.style.top = `${y}px`;
+                selectionBox.style.width = `${width}px`;
+                selectionBox.style.height = `${height}px`;
+
+                state.currentSelection = { x, y, width, height };
+            }
+        }
+
+        function endSelection(e) {
+            if (!state.isSelecting) return;
+            state.isSelecting = false;
+
+            const selectionBox = document.getElementById('currentSelection');
+            if (selectionBox && state.currentSelection) {
+                if (state.currentSelection.width > 10 && state.currentSelection.height > 10) {
+                    // Create segment
+                    createSegment(state.currentSelection, selectionBox);
+                } else {
+                    selectionBox.remove();
+                }
+            }
+            state.currentSelection = null;
+        }
+
+        function createSegment(selection, selectionBox) {
+            const segmentId = Date.now();
+            const imgRect = elements.uploadedImage.getBoundingClientRect();
+            const scaleX = state.image.naturalWidth / imgRect.width;
+            const scaleY = state.image.naturalHeight / imgRect.height;
+
+            const segment = {
+                id: segmentId,
+                x: Math.round(selection.x * scaleX),
+                y: Math.round(selection.y * scaleY),
+                width: Math.round(selection.width * scaleX),
+                height: Math.round(selection.height * scaleY),
+                displayX: selection.x,
+                displayY: selection.y,
+                displayWidth: selection.width,
+                displayHeight: selection.height,
+                note: ''
+            };
+
+            state.segments.push(segment);
+
+            // Remove selection box and create ASCII overlay
+            selectionBox.remove();
+            createASCIIOverlay(segment);
+            updateSegmentsList();
+        }
+
+        function createASCIIOverlay(segment) {
+            const ascii = generateASCII(segment);
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'ascii-overlay';
+            overlay.id = `ascii-${segment.id}`;
+            overlay.style.left = `${segment.displayX}px`;
+            overlay.style.top = `${segment.displayY}px`;
+            overlay.style.width = `${segment.displayWidth}px`;
+            overlay.style.height = `${segment.displayHeight}px`;
+            overlay.textContent = ascii;
+            
+            elements.imageContainer.appendChild(overlay);
+        }
+
+        function generateASCII(segment) {
+            const canvas = elements.processingCanvas;
+            const ctx = canvas.getContext('2d');
+
+            // Calculate ASCII dimensions based on selection size
+            const charWidth = 6;
+            const charHeight = 6;
+            const cols = Math.floor(segment.displayWidth / charWidth);
+            const rows = Math.floor(segment.displayHeight / charHeight);
+
+            canvas.width = cols;
+            canvas.height = rows;
+
+            // Draw the selected region scaled down
+            ctx.drawImage(
+                state.image,
+                segment.x, segment.y, segment.width, segment.height,
+                0, 0, cols, rows
+            );
+
+            // Get image data
+            let imageData = ctx.getImageData(0, 0, cols, rows);
+            
+            // Apply adjustments
+            imageData = applyAdjustments(imageData);
+
+            // Generate ASCII
+            let ascii = '';
+            const chars = state.charset;
+
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const i = (y * cols + x) * 4;
+                    const r = imageData.data[i];
+                    const g = imageData.data[i + 1];
+                    const b = imageData.data[i + 2];
+                    
+                    let brightness = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+                    
+                    if (state.invert) {
+                        brightness = 1 - brightness;
+                    }
+
+                    const charIndex = Math.floor(brightness * (chars.length - 1));
+                    ascii += chars[charIndex];
+                }
+                ascii += '\n';
+            }
+
+            return ascii;
+        }
+
+        function applyAdjustments(imageData) {
+            const data = imageData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                let r = data[i];
+                let g = data[i + 1];
+                let b = data[i + 2];
+
+                // Brightness
+                r += state.brightness * 2.55;
+                g += state.brightness * 2.55;
+                b += state.brightness * 2.55;
+
+                // Contrast
+                const factor = (259 * (state.contrast + 255)) / (255 * (259 - state.contrast));
+                r = factor * (r - 128) + 128;
+                g = factor * (g - 128) + 128;
+                b = factor * (b - 128) + 128;
+
+                // Clamp values
+                data[i] = Math.max(0, Math.min(255, r));
+                data[i + 1] = Math.max(0, Math.min(255, g));
+                data[i + 2] = Math.max(0, Math.min(255, b));
+            }
+
+            // Edge detection
+            if (state.edgeDetection) {
+                imageData = applySobelEdgeDetection(imageData);
+            }
+
+            return imageData;
+        }
+
+        function applySobelEdgeDetection(imageData) {
+            const width = imageData.width;
+            const height = imageData.height;
+            const data = imageData.data;
+            const output = new Uint8ClampedArray(data.length);
+
+            const sobelX = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]];
+            const sobelY = [[-1, -2, -1], [0, 0, 0], [1, 2, 1]];
+
+            const threshold = state.edgeThreshold * 2.55;
+
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    let gx = 0, gy = 0;
+
+                    for (let ky = -1; ky <= 1; ky++) {
+                        for (let kx = -1; kx <= 1; kx++) {
+                            const i = ((y + ky) * width + (x + kx)) * 4;
+                            const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+                            gx += gray * sobelX[ky + 1][kx + 1];
+                            gy += gray * sobelY[ky + 1][kx + 1];
+                        }
+                    }
+
+                    const magnitude = Math.sqrt(gx * gx + gy * gy);
+                    const edge = magnitude > threshold ? 255 : 0;
+
+                    const i = (y * width + x) * 4;
+                    output[i] = edge;
+                    output[i + 1] = edge;
+                    output[i + 2] = edge;
+                    output[i + 3] = 255;
+                }
+            }
+
+            return new ImageData(output, width, height);
+        }
+
+        function updateSegmentsList() {
+            elements.segmentsDisplay.style.display = state.segments.length > 0 ? 'block' : 'none';
+            
+            elements.segmentsList.innerHTML = state.segments.map((segment, index) => `
+                <div class="segment-item" data-id="${segment.id}">
+                    <span class="segment-label">segment.coords = ${String(index + 1).padStart(2, '0')}</span>
+                    <span class="segment-coords">${segment.x}.${segment.y}</span>
+                    <span class="segment-note">
+                        // <input type="text" value="${segment.note}" placeholder="NOTE" 
+                            onchange="updateSegmentNote(${segment.id}, this.value)">
+                    </span>
+                    <button class="segment-delete" onclick="deleteSegment(${segment.id})">×</button>
+                </div>
+            `).join('');
+        }
+
+        window.updateSegmentNote = function(id, note) {
+            const segment = state.segments.find(s => s.id === id);
+            if (segment) {
+                segment.note = note;
+            }
+        };
+
+        window.deleteSegment = function(id) {
+            state.segments = state.segments.filter(s => s.id !== id);
+            const overlay = document.getElementById(`ascii-${id}`);
+            if (overlay) overlay.remove();
+            updateSegmentsList();
+        };
+
+        function selectCharset(charsetName) {
+            state.charset = state.charsets[charsetName];
+            
+            document.querySelectorAll('.charset-option').forEach(option => {
+                const radio = option.querySelector('.charset-radio');
+                radio.classList.toggle('selected', option.dataset.charset === charsetName);
+            });
+
+            elements.customCharset.value = '';
+            updateAllSegments();
+        }
+
+        function clearCharsetSelection() {
+            document.querySelectorAll('.charset-radio').forEach(radio => {
+                radio.classList.remove('selected');
+            });
+        }
+
+        function updateAllSegments() {
+            state.segments.forEach(segment => {
+                const overlay = document.getElementById(`ascii-${segment.id}`);
+                if (overlay) {
+                    overlay.textContent = generateASCII(segment);
+                }
+            });
+        }
+
+        function convertFullImage() {
+            if (!state.image) return;
+
+            const imgRect = elements.uploadedImage.getBoundingClientRect();
+            const segment = {
+                id: Date.now(),
+                x: 0,
+                y: 0,
+                width: state.image.naturalWidth,
+                height: state.image.naturalHeight,
+                displayX: 0,
+                displayY: 0,
+                displayWidth: imgRect.width,
+                displayHeight: imgRect.height,
+                note: 'full image'
+            };
+
+            state.segments.push(segment);
+            createASCIIOverlay(segment);
+            updateSegmentsList();
+        }
+
+        function exportASCII() {
+            if (state.segments.length === 0) {
+                alert('No segments to export. Create a selection first.');
+                return;
+            }
+
+            let output = '';
+            const title = elements.pieceTitle.value || 'Untitled';
+            output += `// ${title}\n// Generated by ASCII Image Generator\n// By: Faye Stover\n\n`;
+
+            state.segments.forEach((segment, index) => {
+                output += `/* Segment ${index + 1} - ${segment.note || 'No note'} */\n`;
+                output += `/* Coords: ${segment.x}, ${segment.y} - Size: ${segment.width}x${segment.height} */\n\n`;
+                output += generateASCII(segment);
+                output += '\n\n';
+            });
+
+            elements.asciiOutput.textContent = output;
+            elements.asciiModal.classList.add('open');
+        }
+
+        function clearAll() {
+            state.segments.forEach(segment => {
+                const overlay = document.getElementById(`ascii-${segment.id}`);
+                if (overlay) overlay.remove();
+            });
+            state.segments = [];
+            updateSegmentsList();
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
