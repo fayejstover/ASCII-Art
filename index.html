@@ -797,6 +797,13 @@
                     <div class="accordion-inner">
                         <div class="slider-group">
                             <div class="slider-label">
+                                <span>Image Opacity</span>
+                                <span class="slider-value" id="imageOpacityValue">100%</span>
+                            </div>
+                            <input type="range" id="imageOpacity" min="0" max="100" value="100">
+                        </div>
+                        <div class="slider-group">
+                            <div class="slider-label">
                                 <span>Brightness</span>
                                 <span class="slider-value" id="brightnessValue">0</span>
                             </div>
@@ -917,6 +924,7 @@
             modalClose: document.getElementById('modalClose'),
             titleLabel: document.getElementById('titleLabel'),
             customCharset: document.getElementById('customCharset'),
+            imageOpacity: document.getElementById('imageOpacity'),
             brightness: document.getElementById('brightness'),
             contrast: document.getElementById('contrast'),
             sharpness: document.getElementById('sharpness'),
@@ -989,6 +997,13 @@
             });
 
             // Sliders
+            // Image opacity slider
+            elements.imageOpacity.addEventListener('input', (e) => {
+                const opacity = parseInt(e.target.value);
+                document.getElementById('imageOpacityValue').textContent = opacity + '%';
+                elements.uploadedImage.style.opacity = opacity / 100;
+            });
+
             elements.brightness.addEventListener('input', (e) => {
                 state.brightness = parseInt(e.target.value);
                 document.getElementById('brightnessValue').textContent = state.brightness;
